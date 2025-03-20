@@ -1,4 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Check URL parameters
+    function checkUrlParameters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinParam = urlParams.get('join');
+        const roomParam = urlParams.get('room');
+        const hostParam = urlParams.get('host');
+        const passwordParam = urlParams.get('password');
+        
+        if (joinParam === 'true' && roomParam && hostParam && passwordParam) {
+            // Store room info in sessionStorage
+            sessionStorage.setItem('roomId', roomParam);
+            sessionStorage.setItem('password', passwordParam);
+            sessionStorage.setItem('isHost', 'false');
+            
+            // Redirect to room page
+            window.location.href = `room.html?room=${roomParam}&host=${hostParam}`;
+            return true;
+        }
+        return false;
+    }
+    
+    // Check URL parameters on load
+    const hasJoinParams = checkUrlParameters();
+    
+    // If we're joining from a link, don't initialize the rest of the page
+    if (hasJoinParams) return;
+    
     // Tab switching
     const tabButtons = document.querySelectorAll('.tab-button');
     tabButtons.forEach(button => {
@@ -58,8 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Toast function
     function showToast(title, message, type = 'success') {
-        const toastContainer = document.createElement('div');
-        toastContainer.classList.add('toast-container');
+        const toastContainer = document.getElementById('toast-container');
         
         const toast = document.createElement('div');
         toast.classList.add('toast');
@@ -76,13 +102,14 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         toastContainer.appendChild(toast);
-        document.body.appendChild(toastContainer);
         
         // Auto remove after 5 seconds
         setTimeout(() => {
             toast.classList.add('slide-out');
             setTimeout(() => {
-                document.body.removeChild(toastContainer);
+                if (toastContainer.contains(toast)) {
+                    toastContainer.removeChild(toast);
+                }
             }, 300);
         }, 5000);
         
@@ -91,7 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
         closeButton.addEventListener('click', () => {
             toast.classList.add('slide-out');
             setTimeout(() => {
-                document.body.removeChild(toastContainer);
+                if (toastContainer.contains(toast)) {
+                    toastContainer.removeChild(toast);
+                }
             }, 300);
         });
     }
