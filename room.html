@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Room</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+    <header class="room-header">
+        <div class="room-info">
+            <h1 id="room-id-display">Room: </h1>
+            <span id="user-role-badge" class="badge">Participant</span>
+        </div>
+        <button class="button destructive-button" id="leave-room-button">
+            <i class="fas fa-times"></i> Leave Room
+        </button>
+    </header>
+
+    <main class="room-container">
+        <div class="main-content">
+            <div class="tabs">
+                <div class="tab-header">
+                    <button class="tab-button active" data-tab="chat">Chat</button>
+                    <button class="tab-button" data-tab="call">Video Call</button>
+                </div>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="chat-tab">
+                        <div class="chat-container">
+                            <div class="messages-container" id="messages-container"></div>
+                            <div class="message-input-container">
+                                <input type="text" id="message-input" placeholder="Type a message...">
+                                <button class="button icon-button" id="send-message-button">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                                <div class="file-upload-container">
+                                    <input type="file" id="file-upload" class="hidden">
+                                    <button class="button outline-button" id="file-button">
+                                        <i class="fas fa-upload"></i>
+                                    </button>
+                                    <div class="file-preview" id="file-preview"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="call-tab">
+                        <div class="video-grid">
+                            <div class="video-container local-video-container">
+                                <video id="local-video" autoplay playsinline muted></video>
+                                <div class="video-overlay">
+                                    <span id="local-user-name">You</span>
+                                </div>
+                                <div class="avatar-placeholder" id="local-avatar">
+                                    <span></span>
+                                </div>
+                            </div>
+                            <div class="remote-videos-container" id="remote-videos-container">
+                                <div class="no-participants-message">
+                                    <p>No participants in call</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="call-controls">
+                            <button class="button outline-button icon-button" id="toggle-audio-button">
+                                <i class="fas fa-microphone-slash"></i>
+                            </button>
+                            <button class="button outline-button icon-button" id="toggle-video-button">
+                                <i class="fas fa-video-slash"></i>
+                            </button>
+                            <button class="button primary-button" id="call-button">
+                                <i class="fas fa-phone"></i> Start Call
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-users"></i> Participants</h2>
+                    <p id="participant-count">0 in this room</p>
+                </div>
+                <div class="card-content">
+                    <div class="participants-list" id="participants-list"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="peer-utils.js"></script>
+    <script src="room.js"></script>
+</body>
+</html>
