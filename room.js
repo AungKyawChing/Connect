@@ -33,6 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let userName = "Loading IP..."; // Default until we get IP
     let myPeerId = "";
     
+    // Function to sanitize peer ID (only allow alphanumeric and underscores)
+    function sanitizePeerId(id) {
+        // Replace dots, dashes, and other non-alphanumeric chars with underscores
+        return id.replace(/[^a-zA-Z0-9]/g, '_');
+    }
+    
     // Get user's IP address
     fetch('https://api.ipify.org?format=json')
         .then(response => response.json())
@@ -56,8 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize peer connection
     function initializePeer() {
-        // Create a consistent peer ID format
-        const peerId = isHost ? `${roomId}-host-${userName}` : `${roomId}-peer-${userName}-${Date.now()}`;
+        // Create a consistent peer ID format with sanitization
+        const sanitizedRoomId = sanitizePeerId(roomId);
+        const sanitizedUserName = sanitizePeerId(userName);
+        
+        // Generate a unique peer ID
+        const peerId = isHost ? 
+            `${sanitizedRoomId}_host_${Date.now()}` : 
+            `${sanitizedRoomId}_peer_${Date.now()}`;
+        
         myPeerId = peerId;
         
         peer = new Peer(peerId, {
