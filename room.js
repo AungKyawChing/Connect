@@ -20,13 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     userRoleBadge.textContent = isHost ? 'Host' : 'Participant';
     userRoleBadge.className = isHost ? 'badge' : 'badge outline';
     
-    // Generate random username
-    const userName = `User-${Math.floor(Math.random() * 1000)}`;
-    
-    // Set local user name
-    document.getElementById('local-user-name').textContent = `${userName} (You)`;
-    document.querySelector('#local-avatar span').textContent = userName.charAt(0);
-    
     // Initialize variables
     let peer = null;
     const connections = {};
@@ -37,10 +30,36 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFile = null;
     let participants = [];
     let messages = [];
+    let userName = "Loading IP..."; // Default until we get IP
+    let myPeerId = "";
+    
+    // Get user's IP address
+    fetch('https://api.ipify.org?format=json')
+        .then(response => response.json())
+        .then(data => {
+            userName = data.ip;
+            document.getElementById('local-user-name').textContent = `${userName} (You)`;
+            document.querySelector('#local-avatar span').textContent = userName.charAt(0);
+            
+            // Initialize peer after getting IP
+            initializePeer();
+        })
+        .catch(error => {
+            console.error('Error fetching IP:', error);
+            userName = `User-${Math.floor(Math.random() * 1000)}`;
+            document.getElementById('local-user-name').textContent = `${userName} (You)`;
+            document.querySelector('#local-avatar span').textContent = userName.charAt(0);
+            
+            // Initialize peer even if IP fetch fails
+            initializePeer();
+        });
     
     // Initialize peer connection
     function initializePeer() {
-        const peerId = generatePeerId(roomId, userName);
+        // Create a consistent peer ID format
+        const peerId = isHost ? `${roomId}-host-${userName}` : `${roomId}-peer-${userName}-${Date.now()}`;
+        myPeerId = peerId;
+        
         peer = new Peer(peerId, {
             debug: 2
         });
@@ -64,12 +83,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'system'
             });
             
-            // If not host, connect to the host
+            // If host, add peer ID to URL for sharing
+            if (isHost) {
+                // Create a shareable URL with the host's peer ID
+                const shareableUrl = `${window.location.origin}${window.location.pathname}?join=true&room=${roomId}&host=${id}&password=${password}`;
+                console.log('Shareable URL:', shareableUrl);
+                
+                // Show a toast with instructions
+                showToast('Room Created', 'Share the URL from your address bar with others to join', 'success', 10000);
+                
+                // Update URL without reloading the page
+                window.history.pushState({}, '', `${window.location.pathname}?room=${roomId}&host=${id}`);
+            }
+            
+            // If not host, check URL for host ID and connect
             if (!isHost) {
-                // In a real app, you would discover the host's peer ID through signaling
-                // For demo purposes, we're using a simplified approach
-                const hostId = `${roomId}-host`;
-                connectToPeer(hostId);
+                const urlParams = new URLSearchParams(window.location.search);
+                const hostId = urlParams.get('host');
+                
+                if (hostId) {
+                    console.log('Connecting to host:', hostId);
+                    connectToPeer(hostId);
+                } else {
+                    showToast('Connection Error', 'Host information is missing. Ask the host to share the correct link.', 'error');
+                }
             }
         });
         
@@ -105,8 +142,35 @@ document.addEventListener('DOMContentLoaded', () => {
         peer.on('error', (err) => {
             console.error('Peer error:', err);
             showToast('Connection Error', err.message, 'error');
+            
+            // If the error is about connecting to a peer, provide more helpful information
+            if (err.type === 'peer-unavailable') {
+                showToast('Connection Failed', 'Could not connect to the host. The host may have left or the room ID is incorrect.', 'error');
+            }
         });
     }
+    
+    // Check URL parameters on load
+    function checkUrlParameters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinParam = urlParams.get('join');
+        const roomParam = urlParams.get('room');
+        const hostParam = urlParams.get('host');
+        const passwordParam = urlParams.get('password');
+        
+        if (joinParam === 'true' && roomParam && hostParam && passwordParam) {
+            // Store room info in sessionStorage
+            sessionStorage.setItem('roomId', roomParam);
+            sessionStorage.setItem('password', passwordParam);
+            sessionStorage.setItem('isHost', 'false');
+            
+            // Reload the page to join the room
+            window.location.href = `room.html?room=${roomParam}&host=${hostParam}`;
+        }
+    }
+    
+    // Check URL parameters on initial load
+    checkUrlParameters();
     
     function connectToPeer(peerId) {
         if (!peer) return;
@@ -591,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('file-upload').value = '';
     }
     
-    function showToast(title, message, type = 'success') {
+    function showToast(title, message, type = 'success', duration = 5000) {
         const toastContainer = document.getElementById('toast-container');
         
         const toast = document.createElement('div');
@@ -610,20 +674,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         toastContainer.appendChild(toast);
         
-        // Auto remove after 5 seconds
+        // Auto remove after specified duration
         setTimeout(() => {
             toast.classList.add('slide-out');
             setTimeout(() => {
-                toastContainer.removeChild(toast);
+                if (toastContainer.contains(toast)) {
+                    toastContainer.removeChild(toast);
+                }
             }, 300);
-        }, 5000);
+        }, duration);
         
         // Close button
         const closeButton = toast.querySelector('.toast-close');
         closeButton.addEventListener('click', () => {
             toast.classList.add('slide-out');
             setTimeout(() => {
-                toastContainer.removeChild(toast);
+                if (toastContainer.contains(toast)) {
+                    toastContainer.removeChild(toast);
+                }
             }, 300);
         });
     }
@@ -683,6 +751,26 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'index.html';
     });
     
-    // Initialize
-    initializePeer();
+    // Add a copy link button to the room header if host
+    if (isHost) {
+        const roomHeader = document.querySelector('.room-info');
+        const copyLinkButton = document.createElement('button');
+        copyLinkButton.className = 'button outline-button';
+        copyLinkButton.innerHTML = '<i class="fas fa-copy"></i> Copy Invite Link';
+        copyLinkButton.style.marginLeft = '10px';
+        
+        copyLinkButton.addEventListener('click', () => {
+            const shareableUrl = `${window.location.origin}${window.location.pathname}?join=true&room=${roomId}&host=${myPeerId}&password=${password}`;
+            navigator.clipboard.writeText(shareableUrl)
+                .then(() => {
+                    showToast('Success', 'Invite link copied to clipboard', 'success');
+                })
+                .catch(err => {
+                    console.error('Could not copy text: ', err);
+                    showToast('Error', 'Failed to copy link', 'error');
+                });
+        });
+        
+        roomHeader.appendChild(copyLinkButton);
+    }
 });
